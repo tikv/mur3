@@ -1,0 +1,17 @@
+[package]
+name = "mur3"
+version = "0.1.0"
+authors = ["The TiKV Project Developers"]
+edition = "2018"
+
+[dependencies]
+
+[dev-dependencies]
+quickcheck = "1.0"
+quickcheck_macros = "1"
+
+[[bench]]
+name = "bench"
+
+[profile.bench]
+codegen-units = 1
