@@ -1,8 +1,8 @@
 //! A rust implementation of MurmurHash3.
 
 mod hash128 {
-    use core::{hash::Hasher, slice};
     use core::ptr;
+    use core::{hash::Hasher, slice};
 
     const C1: u64 = 0x87c37b91114253d5;
     const C2: u64 = 0x4cf5ad432745937f;
@@ -11,7 +11,7 @@ mod hash128 {
 
     pub fn murmurhash3_x64_128(bytes: &[u8], seed: u32) -> (u64, u64) {
         let nblocks = bytes.len() / 16;
-        
+
         let mut h1 = seed as u64;
         let mut h2 = seed as u64;
 
@@ -28,9 +28,15 @@ mod hash128 {
             h1 = res.0;
             h2 = res.1;
         }
-        
+
         unsafe {
-            finish_tail128(start as *const u8, bytes.as_ptr().add(bytes.len()), bytes.len() as u64, h1, h2)
+            finish_tail128(
+                start as *const u8,
+                bytes.as_ptr().add(bytes.len()),
+                bytes.len() as u64,
+                h1,
+                h2,
+            )
         }
     }
 
@@ -57,7 +63,7 @@ mod hash128 {
         k2 *= C2;
         k2 = k2.rotate_left(33);
         k2 *= C1;
-        
+
         h2 ^= k2;
         h2 = h2.rotate_left(31);
         h2 += h1;
@@ -67,7 +73,13 @@ mod hash128 {
     }
 
     #[inline]
-    unsafe fn finish_tail128(mut tail: *const u8, end: *const u8, total: u64, mut h1: u64, mut h2: u64) -> (u64, u64) {
+    unsafe fn finish_tail128(
+        mut tail: *const u8,
+        end: *const u8,
+        total: u64,
+        mut h1: u64,
+        mut h2: u64,
+    ) -> (u64, u64) {
         if tail != end {
             let mut k1: u64 = 0;
             for i in 0..8 {
@@ -97,7 +109,7 @@ mod hash128 {
                 h2 ^= k1;
             }
         }
-        
+
         h1 ^= total;
         h2 ^= total;
         h1 += h2;
@@ -140,7 +152,13 @@ mod hash128 {
 
         pub fn finish128(&self) -> (u64, u64) {
             unsafe {
-                finish_tail128(self.buf.as_ptr(), self.buf.as_ptr().add(self.len), self.consume + self.len as u64, self.h1, self.h2)
+                finish_tail128(
+                    self.buf.as_ptr(),
+                    self.buf.as_ptr().add(self.len),
+                    self.consume + self.len as u64,
+                    self.h1,
+                    self.h2,
+                )
             }
         }
     }
@@ -149,14 +167,22 @@ mod hash128 {
         fn write(&mut self, mut bytes: &[u8]) {
             if self.len + bytes.len() < 16 {
                 unsafe {
-                    ptr::copy_nonoverlapping(bytes.as_ptr(), self.buf.as_mut_ptr().add(self.len), bytes.len());
+                    ptr::copy_nonoverlapping(
+                        bytes.as_ptr(),
+                        self.buf.as_mut_ptr().add(self.len),
+                        bytes.len(),
+                    );
                 }
                 self.len += bytes.len();
                 return;
             } else if self.len != 0 {
                 let (n1, n2) = unsafe {
                     let cnt = 16 - self.len;
-                    ptr::copy_nonoverlapping(bytes.as_ptr(), self.buf.as_mut_ptr().add(self.len), cnt);
+                    ptr::copy_nonoverlapping(
+                        bytes.as_ptr(),
+                        self.buf.as_mut_ptr().add(self.len),
+                        cnt,
+                    );
                     bytes = slice::from_raw_parts(bytes.as_ptr().add(cnt), bytes.len() - cnt);
                     let n1 = ptr::read(self.buf.as_ptr() as *const u64);
                     let n2 = ptr::read(self.buf.as_ptr().add(8) as *const u64);
@@ -192,8 +218,8 @@ mod hash128 {
 }
 
 mod hash32 {
-    use core::{ptr, slice};
     use core::hash::Hasher;
+    use core::{ptr, slice};
 
     const C1: u32 = 0xcc9e2d51;
     const C2: u32 = 0x1b873593;
@@ -247,15 +273,18 @@ mod hash32 {
         let mut start = bytes.as_ptr();
 
         for _ in 0..nblocks {
-            let k = u32::from_le(unsafe {
-                ptr::read_unaligned(start as *const u32)
-            });
+            let k = u32::from_le(unsafe { ptr::read_unaligned(start as *const u32) });
             h = feed32(h, k);
             start = unsafe { start.add(4) };
         }
-        
+
         unsafe {
-            finish_tail32(start as *const u8, bytes.as_ptr().add(bytes.len()), bytes.len() as u64, h)
+            finish_tail32(
+                start as *const u8,
+                bytes.as_ptr().add(bytes.len()),
+                bytes.len() as u64,
+                h,
+            )
         }
     }
 
@@ -284,7 +313,12 @@ mod hash32 {
 
         pub fn finish32(&self) -> u32 {
             unsafe {
-                finish_tail32(self.buf.as_ptr(), self.buf.as_ptr().add(self.len), self.consume + self.len as u64, self.h)
+                finish_tail32(
+                    self.buf.as_ptr(),
+                    self.buf.as_ptr().add(self.len),
+                    self.consume + self.len as u64,
+                    self.h,
+                )
             }
         }
     }
@@ -293,14 +327,22 @@ mod hash32 {
         fn write(&mut self, mut bytes: &[u8]) {
             if self.len + bytes.len() < 4 {
                 unsafe {
-                    ptr::copy_nonoverlapping(bytes.as_ptr(), self.buf.as_mut_ptr().add(self.len), bytes.len());
+                    ptr::copy_nonoverlapping(
+                        bytes.as_ptr(),
+                        self.buf.as_mut_ptr().add(self.len),
+                        bytes.len(),
+                    );
                 }
                 self.len += bytes.len();
                 return;
             } else if self.len != 0 {
                 let n = unsafe {
                     let cnt = 4 - self.len;
-                    ptr::copy_nonoverlapping(bytes.as_ptr(), self.buf.as_mut_ptr().add(self.len), cnt);
+                    ptr::copy_nonoverlapping(
+                        bytes.as_ptr(),
+                        self.buf.as_mut_ptr().add(self.len),
+                        cnt,
+                    );
                     bytes = slice::from_raw_parts(bytes.as_ptr().add(cnt), bytes.len() - cnt);
                     let n = ptr::read(self.buf.as_ptr() as *const u32);
                     self.len = 0;
@@ -332,5 +374,5 @@ mod hash32 {
     }
 }
 
-pub use hash128::{Hasher128, murmurhash3_x64_128};
-pub use hash32::{Hasher32, murmurhash3_x86_32};
+pub use hash128::{murmurhash3_x64_128, Hasher128};
+pub use hash32::{murmurhash3_x86_32, Hasher32};
