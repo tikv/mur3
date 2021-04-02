@@ -43,31 +43,31 @@ mod hash128 {
     #[inline]
     fn fmix64(mut k: u64) -> u64 {
         k ^= k >> 33;
-        k *= 0xff51afd7ed558ccd;
+        k = k.wrapping_mul(0xff51afd7ed558ccd);
         k ^= k >> 33;
-        k *= 0xc4ceb9fe1a85ec53;
+        k = k.wrapping_mul(0xc4ceb9fe1a85ec53);
         k ^ (k >> 33)
     }
 
     #[inline]
     fn feed128(mut h1: u64, mut h2: u64, mut k1: u64, mut k2: u64) -> (u64, u64) {
-        k1 *= C1;
+        k1 = k1.wrapping_mul(C1);
         k1 = k1.rotate_left(31);
-        k1 *= C2;
+        k1 = k1.wrapping_mul(C2);
 
         h1 ^= k1;
         h1 = h1.rotate_left(27);
-        h1 += h2;
-        h1 = h1 * 5 + C3;
+        h1 = h1.wrapping_add(h2);
+        h1 = h1.wrapping_mul(5).wrapping_add(C3);
 
-        k2 *= C2;
+        k2 = k2.wrapping_mul(C2);
         k2 = k2.rotate_left(33);
-        k2 *= C1;
+        k2 = k2.wrapping_mul(C1);
 
         h2 ^= k2;
         h2 = h2.rotate_left(31);
-        h2 += h1;
-        h2 = h2 * 5 + C4;
+        h2 = h2.wrapping_add(h1);
+        h2 = h2.wrapping_mul(5).wrapping_add(C4);
 
         (h1, h2)
     }
@@ -89,9 +89,9 @@ mod hash128 {
                     break;
                 }
             }
-            k1 *= C1;
+            k1 = k1.wrapping_mul(C1);
             k1 = k1.rotate_left(31);
-            k1 *= C2;
+            k1 = k1.wrapping_mul(C2);
             h1 ^= k1;
 
             if tail != end {
@@ -103,21 +103,21 @@ mod hash128 {
                         break;
                     }
                 }
-                k1 *= C2;
+                k1 = k1.wrapping_mul(C2);
                 k1 = k1.rotate_left(33);
-                k1 *= C1;
+                k1 = k1.wrapping_mul(C1);
                 h2 ^= k1;
             }
         }
 
         h1 ^= total;
         h2 ^= total;
-        h1 += h2;
-        h2 += h1;
+        h1 = h1.wrapping_add(h2);
+        h2 = h2.wrapping_add(h1);
         h1 = fmix64(h1);
         h2 = fmix64(h2);
-        h1 += h2;
-        h2 += h1;
+        h1 = h1.wrapping_add(h2);
+        h2 = h2.wrapping_add(h1);
         (h1, h2)
     }
 
@@ -230,21 +230,21 @@ mod hash32 {
     #[inline]
     fn fmix32(mut h: u32) -> u32 {
         h ^= h >> 16;
-        h *= C4;
+        h = h.wrapping_mul(C4);
         h ^= h >> 13;
-        h *= C5;
+        h = h.wrapping_mul(C5);
         h ^ (h >> 16)
     }
 
     #[inline]
     fn feed32(mut h: u32, mut k: u32) -> u32 {
-        k *= C1;
+        k = k.wrapping_mul(C1);
         k = k.rotate_left(15);
-        k *= C2;
+        k = k.wrapping_mul(C2);
 
         h ^= k;
         h = h.rotate_left(13);
-        h * 5 + C3
+        h.wrapping_mul(5).wrapping_add(C3)
     }
 
     #[inline]
@@ -258,9 +258,9 @@ mod hash32 {
                     break;
                 }
             }
-            k *= C1;
+            k = k.wrapping_mul(C1);
             k = k.rotate_left(15);
-            k *= C2;
+            k = k.wrapping_mul(C2);
             h ^= k;
         }
         h ^= total as u32;

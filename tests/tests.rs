@@ -1,5 +1,6 @@
 use core::hash::Hasher;
 use mur3::*;
+use mur3_c::*;
 use quickcheck_macros::quickcheck;
 
 const DATA: &[(u32, u32, u64, u64, &str)] = &[
@@ -129,7 +130,9 @@ fn random_check_32(xs: Vec<u8>) -> bool {
     let func_res = murmurhash3_x86_32(&xs, 0);
     let mut hasher32 = Hasher32::with_seed(0);
     hasher32.write(&xs);
-    hasher32.finish32() == func_res
+    let hash_res = hasher32.finish32();
+    let c_res = hash32(&xs, 0);
+    func_res == hash_res && hash_res == c_res
 }
 
 #[quickcheck]
@@ -137,7 +140,9 @@ fn random_check_128(xs: Vec<u8>) -> bool {
     let func_res = murmurhash3_x64_128(&xs, 0);
     let mut hasher = Hasher128::with_seed(0);
     hasher.write(&xs);
-    hasher.finish128() == func_res
+    let hash_res = hasher.finish128();
+    let c_res = hash128_64(&xs, 0);
+    func_res == hash_res && hash_res == c_res
 }
 
 #[quickcheck]
@@ -145,7 +150,9 @@ fn random_check_32_seed(xs: Vec<u8>, seed: u32) -> bool {
     let func_res = murmurhash3_x86_32(&xs, seed);
     let mut hasher32 = Hasher32::with_seed(seed);
     hasher32.write(&xs);
-    hasher32.finish32() == func_res
+    let hash_res = hasher32.finish32();
+    let c_res = hash32(&xs, seed);
+    func_res == hash_res && hash_res == c_res
 }
 
 #[quickcheck]
@@ -153,7 +160,9 @@ fn random_check_128_seed(xs: Vec<u8>, seed: u32) -> bool {
     let func_res = murmurhash3_x64_128(&xs, seed);
     let mut hasher = Hasher128::with_seed(seed);
     hasher.write(&xs);
-    hasher.finish128() == func_res
+    let hash_res = hasher.finish128();
+    let c_res = hash128_64(&xs, seed);
+    func_res == hash_res && hash_res == c_res
 }
 
 #[quickcheck]
@@ -167,7 +176,9 @@ fn random_check_32_chunks(xs: Vec<Vec<u8>>, seed: u32) -> bool {
     for x in xs {
         hasher32.write(&x);
     }
-    hasher32.finish32() == func_res
+    let hash_res = hasher32.finish32();
+    let c_res = hash32(&all_bytes, seed);
+    func_res == hash_res && hash_res == c_res
 }
 
 #[quickcheck]
@@ -181,5 +192,7 @@ fn random_check_128_chunks(xs: Vec<Vec<u8>>, seed: u32) -> bool {
     for x in xs {
         hasher.write(&x);
     }
-    hasher.finish128() == func_res
+    let hash_res = hasher.finish128();
+    let c_res = hash128_64(&all_bytes, seed);
+    func_res == hash_res && hash_res == c_res
 }
