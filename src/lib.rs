@@ -1,4 +1,39 @@
 //! A rust implementation of MurmurHash3.
+//!
+//! To use the crate, add it as dependency:
+//! ```toml
+//! [dependency]
+//! mur3 = "0.1"
+//! ```
+//!
+//! To calculate a hash of a byte slices, just use function version
+//! of the APIs:
+//! ```
+//! let bytes = b"hello world";
+//! let seed = 0;
+//! let (h1, h2) = mur3::murmurhash3_x64_128(bytes, seed);
+//! ```
+//!
+//! If there are a lot of byte slices, you can also feed them using
+//! Hasher. Hasher version is a little slower than the function version,
+//! but more flexible.
+//! ```
+//! use std::hash::Hasher;
+//!
+//! let bytes: &[&[u8]] = &[b"hello", b"world"];
+//! let seed = 0;
+//!
+//! let mut hasher = mur3::Hasher128::with_seed(seed);
+//! for b in bytes {
+//!     hasher.write(b);
+//! }
+//! let (h1, h2) = hasher.finish128();
+//! ```
+//!
+//! The library can be used in `no_std` freely.
+
+#![no_std]
+#![deny(missing_docs)]
 
 mod hash128 {
     use core::ptr;
@@ -9,6 +44,12 @@ mod hash128 {
     const C3: u64 = 0x52dce729;
     const C4: u64 = 0x38495ab5;
 
+    /// Gets the 128-bit MurmurHash3 sum of data.
+    ///
+    /// If you only need 64-bit result, just use the first returned value.
+    /// To feed multiple byte slices, use `Hasher128` instead.
+    ///
+    /// The function is optimized for 64 bit platform.
     pub fn murmurhash3_x64_128(bytes: &[u8], seed: u32) -> (u64, u64) {
         let nblocks = bytes.len() / 16;
 
@@ -121,6 +162,7 @@ mod hash128 {
         (h1, h2)
     }
 
+    /// A 128-bit Murmur3 hasher.
     #[repr(C)]
     pub struct Hasher128 {
         h1: u64,
@@ -131,6 +173,7 @@ mod hash128 {
     }
 
     impl Hasher128 {
+        /// Creates a hasher with given seed.
         pub fn with_seed(seed: u32) -> Hasher128 {
             Hasher128 {
                 h1: seed as u64,
@@ -150,6 +193,11 @@ mod hash128 {
             self.consume += 16;
         }
 
+        /// Gets the 128-bit hash result.
+        ///
+        /// This function doesn't have any side effect. So calling it
+        /// multiple times without feeding more data will return the
+        /// same result. New data will resume calculation from last state.
         pub fn finish128(&self) -> (u64, u64) {
             unsafe {
                 finish_tail128(
@@ -164,6 +212,7 @@ mod hash128 {
     }
 
     impl Hasher for Hasher128 {
+        /// Feeds a byte slice to the hasher.
         fn write(&mut self, mut bytes: &[u8]) {
             if self.len + bytes.len() < 16 {
                 unsafe {
@@ -211,6 +260,9 @@ mod hash128 {
             }
         }
 
+        /// Gets the 64-bit hash value.
+        ///
+        /// It's the same as `self.finish128().0`.
         fn finish(&self) -> u64 {
             self.finish128().0
         }
@@ -267,6 +319,9 @@ mod hash32 {
         fmix32(h)
     }
 
+    /// Gets the 32-bit MurmurHash3 sum of data.
+    ///
+    /// To feed multiple byte slices, use `Hasher32` instead.
     pub fn murmurhash3_x86_32(bytes: &[u8], seed: u32) -> u32 {
         let nblocks = bytes.len() / 4;
         let mut h = seed;
@@ -288,6 +343,7 @@ mod hash32 {
         }
     }
 
+    /// A 32-bit Murmur3 hasher.
     pub struct Hasher32 {
         h: u32,
         buf: [u8; 4],
@@ -296,6 +352,7 @@ mod hash32 {
     }
 
     impl Hasher32 {
+        /// Creates a hasher with given seed.
         pub fn with_seed(seed: u32) -> Hasher32 {
             Hasher32 {
                 h: seed,
@@ -311,6 +368,11 @@ mod hash32 {
             self.consume += 4;
         }
 
+        /// Gets the 32-bit hash result.
+        ///
+        /// This function doesn't have any side effect. So calling it
+        /// multiple times without feeding more data will return the
+        /// same result. New data will resume calculation from last state.
         pub fn finish32(&self) -> u32 {
             unsafe {
                 finish_tail32(
@@ -324,6 +386,7 @@ mod hash32 {
     }
 
     impl Hasher for Hasher32 {
+        /// Feeds a byte slice to the hasher.
         fn write(&mut self, mut bytes: &[u8]) {
             if self.len + bytes.len() < 4 {
                 unsafe {
@@ -368,6 +431,9 @@ mod hash32 {
             }
         }
 
+        /// Gets the 64-bit hash value.
+        ///
+        /// It's the same as `self.finish32() as u64`.
         fn finish(&self) -> u64 {
             self.finish32() as u64
         }
