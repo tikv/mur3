@@ -3,6 +3,13 @@ name = "mur3"
 version = "0.1.0"
 authors = ["The TiKV Project Developers"]
 edition = "2018"
+keywords = ["murmurhash3", "murmur3"]
+readme = "README.md"
+homepage = "https://github.com/tikv/mur3"
+documentation = "https://docs.rs/mur3"
+description = "The rust language implementation of MurmurHash3."
+categories = ["algorithms"]
+license = "MIT"
 
 [dependencies]
 
