@@ -198,6 +198,7 @@ mod hash128 {
         /// This function doesn't have any side effect. So calling it
         /// multiple times without feeding more data will return the
         /// same result. New data will resume calculation from last state.
+        #[inline]
         pub fn finish128(&self) -> (u64, u64) {
             unsafe {
                 finish_tail128(
@@ -263,6 +264,7 @@ mod hash128 {
         /// Gets the 64-bit hash value.
         ///
         /// It's the same as `self.finish128().0`.
+        #[inline]
         fn finish(&self) -> u64 {
             self.finish128().0
         }
@@ -344,6 +346,7 @@ mod hash32 {
     }
 
     /// A 32-bit Murmur3 hasher.
+    #[repr(C)]
     pub struct Hasher32 {
         h: u32,
         buf: [u8; 4],
@@ -373,6 +376,7 @@ mod hash32 {
         /// This function doesn't have any side effect. So calling it
         /// multiple times without feeding more data will return the
         /// same result. New data will resume calculation from last state.
+        #[inline]
         pub fn finish32(&self) -> u32 {
             unsafe {
                 finish_tail32(
@@ -434,6 +438,7 @@ mod hash32 {
         /// Gets the 64-bit hash value.
         ///
         /// It's the same as `self.finish32() as u64`.
+        #[inline]
         fn finish(&self) -> u64 {
             self.finish32() as u64
         }
