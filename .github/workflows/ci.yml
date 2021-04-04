@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: 
+    - master
+
+env:
+  RUST_BACKTRACE: 1
+  RUSTFLAGS: "--deny=warnings"
+  TEST_BIND: 1
+
+jobs:
+  Linux-Stable:
+    name: Linux-Stable
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - run: cargo fmt --all -- --check
+    - run: cargo clippy --all -- -D clippy::all
+    - run: cargo build
+    - run: cargo test --all
+
+  Linux-Nightly:
+    name: Linux-Nightly
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - run: rustup default nightly
+    - run: cargo build
+    - run: cargo test --all
+    - run: RUSTFLAGS="-Z sanitizer=address" cargo test --all --target x86_64-unknown-linux-gnu
+
+  Mac:
+    name: Mac
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v2
+    - run: cargo build
+    - run: cargo test --all
+
+  Win:
+    name: Windows
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v2
+    - run: cargo build
+    - run: cargo test --all
