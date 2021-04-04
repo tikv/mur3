@@ -122,14 +122,21 @@ mod hash128 {
         mut h2: u64,
     ) -> (u64, u64) {
         if tail != end {
-            let mut k1: u64 = 0;
-            for i in 0..8 {
-                k1 ^= ((*tail) as u64) << (8 * i);
-                tail = tail.add(1);
-                if tail == end {
-                    break;
+            let mut k1 = if end.offset_from(tail) >= 8 {
+                let k = u64::from_le(ptr::read_unaligned(tail as *const u64));
+                tail = tail.add(8);
+                k
+            } else {
+                let mut k1: u64 = 0;
+                for i in 0..8 {
+                    k1 ^= ((*tail) as u64) << (8 * i);
+                    tail = tail.add(1);
+                    if tail == end {
+                        break;
+                    }
                 }
-            }
+                k1
+            };
             k1 = k1.wrapping_mul(C1);
             k1 = k1.rotate_left(31);
             k1 = k1.wrapping_mul(C2);
