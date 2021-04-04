@@ -1,79 +1,86 @@
-#![feature(test)]
+use criterion::*;
 
-extern crate test;
-
+use rand::*;
 use std::hash::Hasher;
-use test::Bencher;
 
 use mur3::*;
 use mur3_c::*;
 
-#[bench]
-fn bench_32(b: &mut Bencher) {
-    let string: &[u8] =
-        test::black_box(b"Lorem ipsum dolor sit amet, consectetur adipisicing elit");
-    b.bytes = string.len() as u64;
-    b.iter(|| {
-        let h = murmurhash3_x86_32(string, 0);
-        test::black_box(h);
+fn bench_murmur3_32(b: &mut Criterion, size: usize) {
+    let mut group = b.benchmark_group("Murmur3_x86_32");
+    let mut buf = vec![0; size];
+    rand::thread_rng().fill_bytes(buf.as_mut_slice());
+
+    group.throughput(Throughput::Bytes(size as u64));
+    group.bench_with_input(BenchmarkId::new("rust-func", size), &buf, |b, i| {
+        b.iter(|| {
+            let res = murmurhash3_x86_32(i, 0);
+            black_box(res);
+        })
     });
+    group.bench_with_input(BenchmarkId::new("c-func", size), &buf, |b, i| {
+        b.iter(|| {
+            let res = hash32(i, 0);
+            black_box(res);
+        })
+    });
+    group.bench_with_input(BenchmarkId::new("hasher", size), &buf, |b, i| {
+        b.iter(|| {
+            let mut hasher = Hasher32::with_seed(0);
+            hasher.write(i);
+            let res = hasher.finish32();
+            black_box(res);
+        })
+    });
+
+    group.finish();
 }
 
-#[bench]
-fn bench_c_32(b: &mut Bencher) {
-    let string: &[u8] =
-        test::black_box(b"Lorem ipsum dolor sit amet, consectetur adipisicing elit");
-    b.bytes = string.len() as u64;
-    b.iter(|| {
-        let h = hash32(string, 0);
-        test::black_box(h);
+fn bench_murmur3_128(b: &mut Criterion, size: usize) {
+    let mut group = b.benchmark_group("Murmur3_x64_128");
+    let mut buf = vec![0; size];
+    rand::thread_rng().fill_bytes(buf.as_mut_slice());
+
+    group.throughput(Throughput::Bytes(size as u64));
+    group.bench_with_input(BenchmarkId::new("rust-func", size), &buf, |b, i| {
+        b.iter(|| {
+            let res = murmurhash3_x64_128(i, 0);
+            black_box(res);
+        })
     });
+    group.bench_with_input(BenchmarkId::new("c-func", size), &buf, |b, i| {
+        b.iter(|| {
+            let res = hash128_64(i, 0);
+            black_box(res);
+        })
+    });
+    group.bench_with_input(BenchmarkId::new("hasher", size), &buf, |b, i| {
+        b.iter(|| {
+            let mut hasher = Hasher128::with_seed(0);
+            hasher.write(i);
+            let res = hasher.finish128();
+            black_box(res);
+        })
+    });
+
+    group.finish();
 }
 
-#[bench]
-fn bench_x64_128(b: &mut Bencher) {
-    let string: &[u8] =
-        test::black_box(b"Lorem ipsum dolor sit amet, consectetur adipisicing elit");
-    b.bytes = string.len() as u64;
-    b.iter(|| {
-        let h = murmurhash3_x64_128(string, 0);
-        test::black_box(h);
-    });
+fn bench_murmur3(b: &mut Criterion) {
+    for size in 0..=4 {
+        bench_murmur3_32(b, size);
+    }
+
+    for size in 0..=16 {
+        bench_murmur3_128(b, size);
+    }
+
+    for p in 5..=13 {
+        let size = 2usize.pow(p);
+        bench_murmur3_32(b, size);
+        bench_murmur3_128(b, size);
+    }
 }
 
-#[bench]
-fn bench_32_hasher(b: &mut Bencher) {
-    let string: &[u8] =
-        test::black_box(b"Lorem ipsum dolor sit amet, consectetur adipisicing elit");
-    b.bytes = string.len() as u64;
-    b.iter(|| {
-        let mut hasher = Hasher32::with_seed(0);
-        hasher.write(string);
-        let h = hasher.finish32();
-        test::black_box(h);
-    });
-}
-
-#[bench]
-fn bench_x64_128_hasher(b: &mut Bencher) {
-    let string: &[u8] =
-        test::black_box(b"Lorem ipsum dolor sit amet, consectetur adipisicing elit");
-    b.bytes = string.len() as u64;
-    b.iter(|| {
-        let mut hasher = Hasher128::with_seed(0);
-        hasher.write(string);
-        let h = hasher.finish128();
-        test::black_box(h);
-    });
-}
-
-#[bench]
-fn bench_c_x64_128(b: &mut Bencher) {
-    let string: &[u8] =
-        test::black_box(b"Lorem ipsum dolor sit amet, consectetur adipisicing elit");
-    b.bytes = string.len() as u64;
-    b.iter(|| {
-        let h = hash128_64(string, 0);
-        test::black_box(h);
-    });
-}
+criterion_group!(benches, bench_murmur3);
+criterion_main!(benches);

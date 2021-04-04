@@ -30,7 +30,7 @@ jobs:
     - run: rustup default nightly
     - run: cargo build
     - run: cargo test --all
-    - run: RUSTFLAGS="-Z sanitizer=address" cargo test --all --target x86_64-unknown-linux-gnu
+    - run: RUSTFLAGS="-Z sanitizer=address" RUSTDOCFLAGS="-Z sanitizer=address" cargo test --all --target x86_64-unknown-linux-gnu
 
   Mac:
     name: Mac
