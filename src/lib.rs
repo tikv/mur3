@@ -73,7 +73,7 @@ mod hash128 {
         unsafe {
             finish_tail128(
                 start as *const u8,
-                bytes.as_ptr().add(bytes.len()),
+                bytes.len() % 16,
                 bytes.len() as u64,
                 h1,
                 h2,
@@ -114,47 +114,56 @@ mod hash128 {
     }
 
     #[inline]
+    unsafe fn read_u64(start: *const u8, len: usize) -> (*const u8, usize, u64) {
+        if len >= 8 {
+            return (
+                start.add(8),
+                len - 8,
+                u64::from_le((start as *const u64).read_unaligned()),
+            );
+        }
+        let res = read_partial_u64(start, len);
+        (start, 0, res)
+    }
+
+    #[inline]
+    unsafe fn read_partial_u64(start: *const u8, len: usize) -> u64 {
+        let (off, mut res) = if len >= 4 {
+            (
+                4,
+                u32::from_le((start as *const u32).read_unaligned()) as u64,
+            )
+        } else {
+            (0, 0)
+        };
+        for i in off..len {
+            res |= ((*start.add(i)) as u64) << (8 * i);
+        }
+        res
+    }
+
+    #[inline]
     unsafe fn finish_tail128(
-        mut tail: *const u8,
-        end: *const u8,
+        tail: *const u8,
+        remain: usize,
         total: u64,
         mut h1: u64,
         mut h2: u64,
     ) -> (u64, u64) {
-        if tail != end {
-            let mut k1 = if end.offset_from(tail) >= 8 {
-                let k = u64::from_le(ptr::read_unaligned(tail as *const u64));
-                tail = tail.add(8);
-                k
-            } else {
-                let mut k1: u64 = 0;
-                for i in 0..8 {
-                    k1 ^= ((*tail) as u64) << (8 * i);
-                    tail = tail.add(1);
-                    if tail == end {
-                        break;
-                    }
-                }
-                k1
-            };
-            k1 = k1.wrapping_mul(C1);
-            k1 = k1.rotate_left(31);
-            k1 = k1.wrapping_mul(C2);
-            h1 ^= k1;
+        if remain > 0 {
+            let res = read_u64(tail, remain);
+            let mut k = res.2;
+            k = k.wrapping_mul(C1);
+            k = k.rotate_left(31);
+            k = k.wrapping_mul(C2);
+            h1 ^= k;
 
-            if tail != end {
-                k1 = 0;
-                for i in 0..8 {
-                    k1 ^= ((*tail) as u64) << (8 * i);
-                    tail = tail.add(1);
-                    if tail == end {
-                        break;
-                    }
-                }
-                k1 = k1.wrapping_mul(C2);
-                k1 = k1.rotate_left(33);
-                k1 = k1.wrapping_mul(C1);
-                h2 ^= k1;
+            if res.1 > 0 {
+                k = read_partial_u64(res.0, res.1);
+                k = k.wrapping_mul(C2);
+                k = k.rotate_left(33);
+                k = k.wrapping_mul(C1);
+                h2 ^= k;
             }
         }
 
@@ -210,7 +219,7 @@ mod hash128 {
             unsafe {
                 finish_tail128(
                     self.buf.as_ptr(),
-                    self.buf.as_ptr().add(self.len),
+                    self.len,
                     self.consume + self.len as u64,
                     self.h1,
                     self.h2,
