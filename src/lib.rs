@@ -34,10 +34,13 @@
 
 #![no_std]
 #![deny(missing_docs)]
+#![cfg_attr(feature = "nightly", feature(portable_simd))]
 
 mod hash128 {
     use core::ptr;
     use core::{hash::Hasher, slice};
+    #[cfg(feature = "nightly")]
+    use core::simd::*;
 
     const C1: u64 = 0x87c37b91114253d5;
     const C2: u64 = 0x4cf5ad432745937f;
@@ -81,6 +84,19 @@ mod hash128 {
         }
     }
 
+    #[cfg(feature = "nightly")]
+    #[inline]
+    fn fmix64_simd(k1: u64, k2: u64) -> (u64, u64) {
+        let mut k = u64x2::from([k1, k2]);
+        k ^= k >> 33;
+        k *= 0xff51afd7ed558ccd;
+        k ^= k >> 33;
+        k *= 0xc4ceb9fe1a85ec53;
+        k ^= k >> 33;
+        (k[0], k[1])
+    }
+
+    #[cfg(not(feature = "nightly"))]
     #[inline]
     fn fmix64(mut k: u64) -> u64 {
         k ^= k >> 33;
@@ -88,6 +104,12 @@ mod hash128 {
         k ^= k >> 33;
         k = k.wrapping_mul(0xc4ceb9fe1a85ec53);
         k ^ (k >> 33)
+    }
+
+    #[cfg(not(feature = "nightly"))]
+    #[inline]
+    fn fmix64_simd(k1: u64, k2: u64) -> (u64, u64) {
+        (fmix64(k1), fmix64(k2))
     }
 
     #[inline]
@@ -171,8 +193,7 @@ mod hash128 {
         h2 ^= total;
         h1 = h1.wrapping_add(h2);
         h2 = h2.wrapping_add(h1);
-        h1 = fmix64(h1);
-        h2 = fmix64(h2);
+        let (mut h1, mut h2) = fmix64_simd(h1, h2);
         h1 = h1.wrapping_add(h2);
         h2 = h2.wrapping_add(h1);
         (h1, h2)

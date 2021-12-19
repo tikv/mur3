@@ -11,6 +11,9 @@ description = "The rust language implementation of MurmurHash3."
 categories = ["algorithms"]
 license = "MIT"
 
+[features]
+nightly = []
+
 [dependencies]
 
 [dev-dependencies]
