@@ -35,6 +35,33 @@
 #![no_std]
 #![deny(missing_docs)]
 
+macro_rules! read_n_val {
+    ($name:ident, $next:ident, $n:expr) => {
+        #[inline]
+        fn $name(res: &mut u64, p: *const u8) {
+            *res |= unsafe { (*p.add($n)) as u64 } << (8 * $n);
+            $next(res, p);
+        }
+    };
+}
+
+read_n_val!(read_7, read_6, 6);
+read_n_val!(read_6, read_5, 5);
+read_n_val!(read_5, read_4, 4);
+
+#[inline]
+fn read_4(res: &mut u64, p: *const u8) {
+    *res |= unsafe { u32::from_le((p as *const u32).read_unaligned()) as u64 }
+}
+
+read_n_val!(read_3, read_2, 2);
+read_n_val!(read_2, read_1, 1);
+
+#[inline]
+fn read_1(res: &mut u64, p: *const u8) {
+    *res |= unsafe { *p as u64 };
+}
+
 mod hash128 {
     use core::ptr;
     use core::{hash::Hasher, slice};
@@ -128,16 +155,16 @@ mod hash128 {
 
     #[inline]
     unsafe fn read_partial_u64(start: *const u8, len: usize) -> u64 {
-        let (off, mut res) = if len >= 4 {
-            (
-                4,
-                u32::from_le((start as *const u32).read_unaligned()) as u64,
-            )
-        } else {
-            (0, 0)
-        };
-        for i in off..len {
-            res |= ((*start.add(i)) as u64) << (8 * i);
+        let mut res = 0;
+        match len {
+            7 => super::read_7(&mut res, start),
+            6 => super::read_6(&mut res, start),
+            5 => super::read_5(&mut res, start),
+            4 => super::read_4(&mut res, start),
+            3 => super::read_3(&mut res, start),
+            2 => super::read_2(&mut res, start),
+            1 => super::read_1(&mut res, start),
+            _ => (),
         }
         res
     }
